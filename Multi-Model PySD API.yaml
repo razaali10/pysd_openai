@@ -1,0 +1,205 @@
+openapi: 3.1.0
+info:
+  title: PySD REST API
+  version: 2.0.0
+  description: |
+    Exposes PySD as a multi-model RESTful API. Each model is stored in memory with a unique modelId. Supports Vensim (.mdl) and XMILE (.xmile) formats.
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+
+paths:
+  /model/upload:
+    post:
+      operationId: uploadModel
+      summary: Upload a model file and load it into memory
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The .mdl or .xmile file to upload
+      responses:
+        '200':
+          description: Model uploaded and loaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  modelId:
+                    type: string
+
+  /model/load:
+    post:
+      operationId: loadModelFromPath
+      summary: Load a model from a file path on the server
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                path:
+                  type: string
+                fileType:
+                  type: string
+                  enum: [vensim, xmile]
+                modelId:
+                  type: string
+                  description: Optional custom model ID
+              required: [path, fileType]
+      responses:
+        '200':
+          description: Model loaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  modelId:
+                    type: string
+
+  /model/run:
+    post:
+      operationId: runModel
+      summary: Run a loaded model simulation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                modelId:
+                  type: string
+                params:
+                  type: object
+                  additionalProperties:
+                    type: number
+                returnColumns:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Simulation results
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: number
+        '404':
+          description: Model not found
+
+  /model/components/{modelId}:
+    get:
+      operationId: getModelComponents
+      summary: Get model components (stocks, flows, auxiliaries, constants)
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Component structure
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  stocks:
+                    type: array
+                    items:
+                      type: string
+                  flows:
+                    type: array
+                    items:
+                      type: string
+                  auxiliaries:
+                    type: array
+                    items:
+                      type: string
+                  constants:
+                    type: array
+                    items:
+                      type: string
+        '404':
+          description: Model not found
+
+  /model/parameters:
+    post:
+      operationId: setModelParameters
+      summary: Set model parameter values
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                modelId:
+                  type: string
+                parameters:
+                  type: object
+                  additionalProperties:
+                    type: number
+              required: [modelId, parameters]
+      responses:
+        '200':
+          description: Parameters set successfully
+        '404':
+          description: Model not found
+
+  /model/reset:
+    post:
+      operationId: resetModel
+      summary: Remove a model from memory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                modelId:
+                  type: string
+              required: [modelId]
+      responses:
+        '200':
+          description: Model removed
+        '404':
+          description: Model not found
+
+  /model/list:
+    get:
+      operationId: listModels
+      summary: List all currently loaded models
+      responses:
+        '200':
+          description: List of model IDs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  models:
+                    type: array
+                    items:
+                      type: string
